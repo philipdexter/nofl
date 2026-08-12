@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="The complete 2026 pro football schedule, built to never spoil a score."
+    />
+    <meta name="theme-color" content="#102236" />
+    <title>NOFL — Football, minus the spoilers</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+    <script src="assets/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#schedule">Skip to schedule</a>
+
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="NOFL home">
+        <span class="brand-mark" aria-hidden="true">NØ</span>
+        <span class="brand-name">NOFL</span>
+      </a>
+      <div class="spoiler-seal">
+        <span class="seal-dot" aria-hidden="true"></span>
+        Spoiler shield active
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <p class="eyebrow">2026 regular season · 272 games</p>
+          <h1 id="page-title">All football.<br /><em>No final scores.</em></h1>
+          <p class="hero-intro">
+            Plan the season, find your team, and come back whenever you like.
+            Nothing here will tell you how a game ended.
+          </p>
+        </div>
+
+        <aside class="team-spotlight" id="team-spotlight" aria-live="polite">
+          <p class="spotlight-kicker">Your next game</p>
+          <div id="spotlight-content">
+            <p class="spotlight-empty">Choose a team to make this schedule yours.</p>
+          </div>
+        </aside>
+      </section>
+
+      <section class="control-deck" aria-label="Schedule controls">
+        <div class="control-group team-control">
+          <label for="team-select">Follow a team</label>
+          <div class="select-wrap">
+            <select id="team-select">
+              <option value="ALL">All 32 teams</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control-group view-control">
+          <span class="control-label">View</span>
+          <div class="segmented" role="group" aria-label="Schedule view">
+            <button class="segment is-active" type="button" data-view="all" aria-pressed="true">All games</button>
+            <button class="segment" type="button" data-view="team" aria-pressed="false">My team</button>
+            <button class="segment" type="button" data-view="primetime" aria-pressed="false">Prime time</button>
+            <button class="segment" type="button" data-view="international" aria-pressed="false">International</button>
+          </div>
+        </div>
+
+        <div class="control-group timezone-control">
+          <label for="timezone-select">Kickoff times</label>
+          <div class="select-wrap select-wrap-small">
+            <select id="timezone-select">
+              <option value="local">My local time</option>
+              <option value="America/New_York">Eastern time</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="icon-button" id="density-button" type="button" aria-pressed="false">
+          <span aria-hidden="true">≡</span>
+          Compact
+        </button>
+        <button class="icon-button" id="share-button" type="button">
+          <span aria-hidden="true">↗</span>
+          Share view
+        </button>
+      </section>
+
+      <nav class="week-nav" aria-label="Regular season weeks">
+        <button class="week-arrow" id="previous-week" type="button" aria-label="Previous week">←</button>
+        <div class="week-track" id="week-track"></div>
+        <button class="week-arrow" id="next-week" type="button" aria-label="Next week">→</button>
+      </nav>
+
+      <section class="schedule-shell" id="schedule" tabindex="-1" aria-labelledby="schedule-heading">
+        <header class="schedule-header">
+          <div>
+            <p class="eyebrow" id="week-range">Loading schedule…</p>
+            <h2 id="schedule-heading">Week 1</h2>
+          </div>
+          <p class="game-count" id="game-count" aria-live="polite"></p>
+        </header>
+
+        <div class="schedule-list" id="schedule-list" aria-live="polite" aria-busy="true">
+          <div class="loading-card">Opening the playbook…</div>
+        </div>
+      </section>
+
+      <section class="promise" aria-label="Spoiler-free promise">
+        <div class="promise-mark" aria-hidden="true">0–0</div>
+        <div>
+          <p class="eyebrow">The zero-spoiler promise</p>
+          <h2>We don’t know who won.<br />And we don’t want to.</h2>
+        </div>
+        <p>
+          The default schedule contains no scores, results, records, live states,
+          recap links, or winner data. “Final” isn’t in our vocabulary.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>NOFL is an unofficial, fan-made schedule. Team names belong to their respective owners.</p>
+      <p>
+        Schedule checked against
+        <a href="https://www.nfl.com/schedules/2026/" target="_blank" rel="noreferrer">the official NFL schedule</a>.
+        Dates and networks may flex.
+      </p>
+    </footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <template id="game-template">
+      <article class="game-card">
+        <div class="game-time">
+          <span class="time-value"></span>
+          <span class="time-zone"></span>
+        </div>
+        <div class="matchup">
+          <button class="team away-team" type="button">
+            <span class="team-token away-token"></span>
+            <span class="team-copy">
+              <span class="team-city away-city"></span>
+              <strong class="team-name away-name"></strong>
+            </span>
+          </button>
+          <span class="at-mark" aria-hidden="true">@</span>
+          <button class="team home-team" type="button">
+            <span class="team-token home-token"></span>
+            <span class="team-copy">
+              <span class="team-city home-city"></span>
+              <strong class="team-name home-name"></strong>
+            </span>
+          </button>
+        </div>
+        <div class="game-meta">
+          <span class="network"></span>
+          <span class="venue"></span>
+          <span class="game-note"></span>
+        </div>
+        <button class="calendar-button" type="button" aria-label="Download calendar event" title="Add to calendar">
+          <span aria-hidden="true">＋</span><span class="calendar-label">Calendar</span>
+        </button>
+      </article>
+    </template>
+  </body>
+</html>
