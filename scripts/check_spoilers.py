@@ -40,7 +40,11 @@ if leaks:
     raise SystemExit(1)
 
 games = payload.get("games", [])
-assert payload.get("gameCount") == len(games) == 272, "Expected all 272 regular-season games"
-assert {game["week"] for game in games} == set(range(1, 19)), "Expected weeks 1–18"
-print("Spoiler check passed: 272 games, 18 weeks, 0 result-bearing fields")
-
+regular = [game for game in games if game.get("seasonType") == "regular"]
+preseason = [game for game in games if game.get("seasonType") == "preseason"]
+assert payload.get("gameCount") == len(games) == 321, "Expected all 321 scheduled games"
+assert len(regular) == 272, "Expected all 272 regular-season games"
+assert len(preseason) == 49, "Expected all 49 preseason games"
+assert {game["week"] for game in regular} == set(range(1, 19)), "Expected regular weeks 1–18"
+assert {game["week"] for game in preseason} == set(range(1, 5)), "Expected all preseason weeks"
+print("Spoiler check passed: 321 games, 22 schedule weeks, 0 result-bearing fields")

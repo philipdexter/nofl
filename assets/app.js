@@ -36,8 +36,10 @@ const TEAMS = {
 const STORAGE_KEY = "nofl-preferences-v1";
 const elements = {
   teamSelect: document.querySelector("#team-select"),
+  followedTeams: document.querySelector("#followed-teams"),
   timezoneSelect: document.querySelector("#timezone-select"),
   viewButtons: [...document.querySelectorAll("[data-view]")],
+  phaseButtons: [...document.querySelectorAll("[data-phase]")],
   densityButton: document.querySelector("#density-button"),
   shareButton: document.querySelector("#share-button"),
   previousWeek: document.querySelector("#previous-week"),
@@ -55,8 +57,10 @@ const elements = {
 
 let schedule = [];
 let state = {
-  team: "ALL",
+  teams: [],
+  phase: "regular",
   week: 1,
+  allWeeks: false,
   view: "all",
   timezone: "local",
   compact: false,
@@ -66,20 +70,28 @@ function loadPreferences() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     state = { ...state, ...stored };
+    // Migrate preferences saved by the original single-team version.
+    if (!Array.isArray(stored.teams) && TEAMS[stored.team]) state.teams = [stored.team];
+    delete state.team;
   } catch {
     // A broken preference should never break the schedule.
   }
 
   const query = new URLSearchParams(window.location.search);
-  if (query.has("team") && (query.get("team") === "ALL" || TEAMS[query.get("team")])) {
-    state.team = query.get("team");
+  const queryTeams = query.get("teams") || query.get("team");
+  if (queryTeams) {
+    state.teams = [...new Set(queryTeams.split(",").filter((code) => TEAMS[code]))];
   }
   if (query.has("week")) state.week = clamp(Number(query.get("week")), 1, 18);
+  if (query.get("weeks") === "all") state.allWeeks = true;
   if (["all", "team", "primetime", "international"].includes(query.get("view"))) {
     state.view = query.get("view");
   }
+  if (["preseason", "regular"].includes(query.get("phase"))) state.phase = query.get("phase");
   if (["local", "America/New_York"].includes(query.get("tz"))) state.timezone = query.get("tz");
   if (query.get("compact") === "1") state.compact = true;
+  state.teams = [...new Set((state.teams || []).filter((code) => TEAMS[code]))];
+  state.week = clamp(state.week, 1, state.phase === "preseason" ? 4 : 18);
 }
 
 function savePreferences() {
@@ -94,11 +106,11 @@ function getTimeZone() {
   return state.timezone === "local" ? Intl.DateTimeFormat().resolvedOptions().timeZone : state.timezone;
 }
 
-function getCurrentWeek() {
+function getCurrentSchedulePosition() {
   const now = new Date();
   const futureGames = schedule.filter((game) => game.kickoff && new Date(game.kickoff) >= now);
-  if (futureGames.length) return futureGames[0].week;
-  return schedule.length ? 18 : 1;
+  if (futureGames.length) return { phase: futureGames[0].seasonType, week: futureGames[0].week };
+  return { phase: "regular", week: 18 };
 }
 
 function populateTeamSelect() {
@@ -112,32 +124,70 @@ function populateTeamSelect() {
     });
 }
 
-function buildWeekNavigation() {
+function renderWeekNavigation() {
+  elements.weekTrack.replaceChildren();
   const fragment = document.createDocumentFragment();
-  for (let week = 1; week <= 18; week += 1) {
+  const allButton = document.createElement("button");
+  allButton.type = "button";
+  allButton.className = "week-button week-button-all";
+  allButton.dataset.week = "all";
+  allButton.textContent = "ALL";
+  allButton.setAttribute("aria-label", `View all ${state.phase === "preseason" ? "preseason" : "regular-season"} weeks`);
+  allButton.addEventListener("click", () => setAllWeeks());
+  fragment.append(allButton);
+  const weeks = state.phase === "preseason"
+    ? [
+        { week: 1, short: "HOF", label: "Hall of Fame Weekend" },
+        { week: 2, short: "P1", label: "Preseason Week 1" },
+        { week: 3, short: "P2", label: "Preseason Week 2" },
+        { week: 4, short: "P3", label: "Preseason Week 3" },
+      ]
+    : Array.from({ length: 18 }, (_, index) => ({ week: index + 1, short: `W${index + 1}`, label: `Week ${index + 1}` }));
+  weeks.forEach(({ week, short, label }) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "week-button";
     button.dataset.week = String(week);
-    button.textContent = `W${week}`;
-    button.setAttribute("aria-label", `Week ${week}`);
+    button.textContent = short;
+    button.setAttribute("aria-label", label);
     button.addEventListener("click", () => setWeek(week));
     fragment.append(button);
-  }
+  });
   elements.weekTrack.append(fragment);
 }
 
 function setWeek(week) {
-  state.week = clamp(week, 1, 18);
+  state.allWeeks = false;
+  state.week = clamp(week, 1, state.phase === "preseason" ? 4 : 18);
   savePreferences();
   render();
   const active = elements.weekTrack.querySelector(`[data-week="${state.week}"]`);
   active?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
 }
 
-function setTeam(code) {
-  state.team = TEAMS[code] ? code : "ALL";
-  elements.teamSelect.value = state.team;
+function setAllWeeks() {
+  state.allWeeks = true;
+  savePreferences();
+  render();
+  elements.weekTrack.querySelector('[data-week="all"]')?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+}
+
+function setPhase(phase) {
+  if (!["preseason", "regular"].includes(phase) || phase === state.phase) return;
+  state.phase = phase;
+  const phaseGames = schedule.filter((game) => game.seasonType === phase);
+  const upcoming = phaseGames.find((game) => game.kickoff && new Date(game.kickoff) >= new Date());
+  state.week = upcoming?.week || phaseGames[0]?.week || 1;
+  savePreferences();
+  render();
+}
+
+function toggleTeam(code) {
+  if (!TEAMS[code]) return;
+  state.teams = state.teams.includes(code)
+    ? state.teams.filter((teamCode) => teamCode !== code)
+    : [...state.teams, code];
+  elements.teamSelect.value = "";
   savePreferences();
   render();
 }
@@ -155,10 +205,12 @@ function isPrimeTime(game) {
 }
 
 function filteredGames() {
-  const games = schedule.filter((game) => game.week === state.week);
+  const games = schedule.filter(
+    (game) => game.seasonType === state.phase && (state.allWeeks || game.week === state.week),
+  );
   if (state.view === "team") {
-    if (state.team === "ALL") return games;
-    return games.filter((game) => game.away === state.team || game.home === state.team);
+    if (!state.teams.length) return games;
+    return games.filter((game) => state.teams.includes(game.away) || state.teams.includes(game.home));
   }
   if (state.view === "primetime") return games.filter(isPrimeTime);
   if (state.view === "international") return games.filter((game) => game.neutralSite);
@@ -207,22 +259,25 @@ function weekRange(games) {
 
 function makeTeam(teamElement, code, side) {
   const team = TEAMS[code];
+  const isFollowed = state.teams.includes(code);
   teamElement.dataset.team = code;
-  teamElement.setAttribute("aria-label", `Follow the ${team.city} ${team.name}`);
+  teamElement.setAttribute("aria-label", `${isFollowed ? "Unfollow" : "Follow"} the ${team.city} ${team.name}`);
+  teamElement.setAttribute("aria-pressed", String(isFollowed));
   teamElement.querySelector(`.${side}-token`).textContent = code;
   teamElement.querySelector(`.${side}-token`).style.setProperty("--team-color", team.color);
   teamElement.querySelector(`.${side}-token`).style.setProperty("--team-secondary", team.secondary);
   teamElement.querySelector(`.${side}-city`).textContent = team.city;
   teamElement.querySelector(`.${side}-name`).textContent = team.name;
   teamElement.addEventListener("click", () => {
-    setTeam(code);
-    showToast(`Following ${team.city} ${team.name}`);
+    toggleTeam(code);
+    showToast(`${isFollowed ? "Unfollowed" : "Following"} ${team.city} ${team.name}`);
   });
 }
 
 function buildGameCard(game) {
   const card = elements.gameTemplate.content.firstElementChild.cloneNode(true);
-  const selected = state.team !== "ALL" && (game.away === state.team || game.home === state.team);
+  const followedInGame = [game.away, game.home].filter((code) => state.teams.includes(code));
+  const selected = followedInGame.length > 0;
   const kickoff = formatKickoff(game.kickoff);
   card.dataset.gameId = game.id;
   card.querySelector(".time-value").textContent = kickoff.time;
@@ -235,8 +290,9 @@ function buildGameCard(game) {
 
   if (selected) {
     card.classList.add("is-followed");
-    card.style.setProperty("--team-accent", TEAMS[state.team].color);
-  } else if (state.team !== "ALL" && state.view === "all") {
+    card.style.setProperty("--team-accent", TEAMS[followedInGame[0]].color);
+    if (followedInGame.length === 2) card.classList.add("is-double-followed");
+  } else if (state.teams.length && state.view === "all") {
     card.classList.add("is-dimmed");
   }
 
@@ -250,23 +306,7 @@ function buildGameCard(game) {
   return card;
 }
 
-function renderSchedule() {
-  const allWeekGames = schedule.filter((game) => game.week === state.week);
-  const games = filteredGames();
-  elements.scheduleHeading.textContent = `Week ${state.week}`;
-  elements.weekRange.textContent = weekRange(allWeekGames);
-  elements.gameCount.textContent = `${games.length} ${games.length === 1 ? "game" : "games"}`;
-  elements.scheduleList.replaceChildren();
-
-  if (!games.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty-state";
-    empty.innerHTML = "<h3>Nothing on this channel.</h3><p>Try another week or switch back to all games.</p>";
-    elements.scheduleList.append(empty);
-    elements.scheduleList.setAttribute("aria-busy", "false");
-    return;
-  }
-
+function appendDateGroups(games, parent) {
   const groups = new Map();
   games.forEach((game) => {
     const date = formatDateParts(game.kickoff);
@@ -287,44 +327,114 @@ function renderSchedule() {
     cardList.className = "date-games";
     group.games.forEach((game) => cardList.append(buildGameCard(game)));
     section.append(heading, cardList);
-    elements.scheduleList.append(section);
+    parent.append(section);
   });
+}
+
+function renderSchedule() {
+  const phaseGames = schedule.filter((game) => game.seasonType === state.phase);
+  const selectedWeekGames = phaseGames.filter((game) => game.week === state.week);
+  const games = filteredGames();
+  elements.scheduleHeading.textContent = state.allWeeks
+    ? (state.phase === "preseason" ? "All preseason" : "Full season")
+    : selectedWeekGames[0]?.weekLabel || (state.phase === "preseason" ? "Preseason" : `Week ${state.week}`);
+  elements.weekRange.textContent = weekRange(state.allWeeks ? phaseGames : selectedWeekGames);
+  elements.gameCount.textContent = `${games.length} ${games.length === 1 ? "game" : "games"}`;
+  elements.scheduleList.replaceChildren();
+
+  if (!games.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = "<h3>Nothing on this channel.</h3><p>Try another week or switch back to all games.</p>";
+    elements.scheduleList.append(empty);
+    elements.scheduleList.setAttribute("aria-busy", "false");
+    return;
+  }
+
+  if (state.allWeeks) {
+    const weeks = new Map();
+    games.forEach((game) => {
+      if (!weeks.has(game.week)) weeks.set(game.week, []);
+      weeks.get(game.week).push(game);
+    });
+    weeks.forEach((weekGames) => {
+      const section = document.createElement("section");
+      section.className = "all-week-group";
+      const heading = document.createElement("h3");
+      heading.className = "all-week-heading";
+      heading.textContent = weekGames[0].weekLabel;
+      section.append(heading);
+      appendDateGroups(weekGames, section);
+      elements.scheduleList.append(section);
+    });
+  } else {
+    appendDateGroups(games, elements.scheduleList);
+  }
   elements.scheduleList.setAttribute("aria-busy", "false");
 }
 
 function renderSpotlight() {
-  if (state.team === "ALL") {
+  if (!state.teams.length) {
     elements.spotlight.removeAttribute("data-color");
     elements.spotlight.style.removeProperty("--spotlight-color");
-    elements.spotlightContent.innerHTML = '<p class="spotlight-empty">Choose a team to make this schedule yours.</p>';
+    elements.spotlightContent.innerHTML = '<p class="spotlight-empty">Choose one or more teams to make this schedule yours.</p>';
     return;
   }
 
   const now = new Date();
-  const team = TEAMS[state.team];
-  const teamGames = schedule.filter((game) => game.away === state.team || game.home === state.team);
+  const teamGames = schedule.filter((game) => state.teams.includes(game.away) || state.teams.includes(game.home));
   const game = teamGames.find((candidate) => candidate.kickoff && new Date(candidate.kickoff) >= now) || teamGames[0];
-  elements.spotlight.dataset.color = state.team;
+  const focusCode = state.teams.includes(game.away) ? game.away : game.home;
+  const team = TEAMS[focusCode];
+  elements.spotlight.dataset.color = focusCode;
   elements.spotlight.style.setProperty("--spotlight-color", team.color);
   elements.spotlightContent.replaceChildren();
   const wrapper = document.createElement("div");
   wrapper.className = "spotlight-matchup";
-  const opponentCode = game.away === state.team ? game.home : game.away;
+  const opponentCode = game.away === focusCode ? game.home : game.away;
   const opponent = TEAMS[opponentCode];
-  const homeAway = game.home === state.team ? "vs." : "at";
+  const homeAway = game.home === focusCode ? "vs." : "at";
   const title = document.createElement("strong");
   title.textContent = `${team.name} ${homeAway} ${opponent.name}`;
   const detail = document.createElement("p");
   const date = game.kickoff
     ? new Intl.DateTimeFormat("en-US", { timeZone: getTimeZone(), weekday: "long", month: "long", day: "numeric" }).format(new Date(game.kickoff))
     : "Date to be announced";
-  detail.textContent = `Week ${game.week} · ${date} · ${formatKickoff(game.kickoff).time}`;
+  detail.textContent = `${game.weekLabel} · ${date} · ${formatKickoff(game.kickoff).time}`;
   wrapper.append(title, detail);
   elements.spotlightContent.append(wrapper);
 }
 
+function renderFollowedTeams() {
+  elements.followedTeams.replaceChildren();
+  if (!state.teams.length) {
+    const hint = document.createElement("span");
+    hint.className = "followed-empty";
+    hint.textContent = "No teams followed yet";
+    elements.followedTeams.append(hint);
+    return;
+  }
+
+  state.teams.forEach((code) => {
+    const team = TEAMS[code];
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "followed-team";
+    button.style.setProperty("--team-color", team.color);
+    button.innerHTML = `<span>${code}</span> ${team.name} <b aria-hidden="true">×</b>`;
+    button.setAttribute("aria-label", `Unfollow the ${team.city} ${team.name}`);
+    button.addEventListener("click", () => {
+      toggleTeam(code);
+      showToast(`Unfollowed ${team.city} ${team.name}`);
+    });
+    elements.followedTeams.append(button);
+  });
+}
+
 function renderControls() {
-  elements.teamSelect.value = state.team;
+  elements.teamSelect.value = "";
+  renderFollowedTeams();
+  renderWeekNavigation();
   elements.timezoneSelect.value = state.timezone;
   elements.viewButtons.forEach((button) => {
     const active = button.dataset.view === state.view;
@@ -333,10 +443,17 @@ function renderControls() {
   });
   elements.densityButton.setAttribute("aria-pressed", String(state.compact));
   document.body.classList.toggle("is-compact", state.compact);
-  elements.previousWeek.disabled = state.week === 1;
-  elements.nextWeek.disabled = state.week === 18;
+  elements.phaseButtons.forEach((button) => {
+    const active = button.dataset.phase === state.phase;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  elements.previousWeek.disabled = state.allWeeks || state.week === 1;
+  elements.nextWeek.disabled = state.allWeeks || state.week === (state.phase === "preseason" ? 4 : 18);
   document.querySelectorAll(".week-button").forEach((button) => {
-    const active = Number(button.dataset.week) === state.week;
+    const active = button.dataset.week === "all"
+      ? state.allWeeks
+      : !state.allWeeks && Number(button.dataset.week) === state.week;
     button.classList.toggle("is-active", active);
     if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
@@ -375,7 +492,7 @@ function downloadCalendar(game) {
     `DTEND:${toICSDate(end)}`,
     `SUMMARY:${escapeICS(title)}`,
     `LOCATION:${escapeICS(location)}`,
-    `DESCRIPTION:${escapeICS(`Week ${game.week} · ${game.broadcast || "Broadcast TBD"}`)}`,
+    `DESCRIPTION:${escapeICS(`${game.weekLabel} · ${game.broadcast || "Broadcast TBD"}`)}`,
     "END:VEVENT",
     "END:VCALENDAR",
   ].join("\r\n");
@@ -398,8 +515,10 @@ function showToast(message) {
 async function shareView() {
   const url = new URL(window.location.href);
   url.search = "";
-  if (state.team !== "ALL") url.searchParams.set("team", state.team);
-  url.searchParams.set("week", String(state.week));
+  if (state.teams.length) url.searchParams.set("teams", state.teams.join(","));
+  if (state.phase !== "regular") url.searchParams.set("phase", state.phase);
+  if (state.allWeeks) url.searchParams.set("weeks", "all");
+  else url.searchParams.set("week", String(state.week));
   if (state.view !== "all") url.searchParams.set("view", state.view);
   if (state.timezone !== "local") url.searchParams.set("tz", state.timezone);
   if (state.compact) url.searchParams.set("compact", "1");
@@ -413,7 +532,17 @@ async function shareView() {
 }
 
 function bindEvents() {
-  elements.teamSelect.addEventListener("change", (event) => setTeam(event.target.value));
+  elements.teamSelect.addEventListener("change", (event) => {
+    if (!event.target.value) return;
+    const code = event.target.value;
+    if (state.teams.includes(code)) {
+      showToast(`${TEAMS[code].city} ${TEAMS[code].name} is already followed`);
+      event.target.value = "";
+      return;
+    }
+    toggleTeam(code);
+    showToast(`Following ${TEAMS[code].city} ${TEAMS[code].name}`);
+  });
   elements.timezoneSelect.addEventListener("change", (event) => {
     state.timezone = event.target.value;
     savePreferences();
@@ -421,8 +550,8 @@ function bindEvents() {
   });
   elements.viewButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      if (button.dataset.view === "team" && state.team === "ALL") {
-        showToast("Choose a team first");
+      if (button.dataset.view === "team" && !state.teams.length) {
+        showToast("Choose one or more teams first");
         elements.teamSelect.focus();
         return;
       }
@@ -430,6 +559,9 @@ function bindEvents() {
       savePreferences();
       render();
     });
+  });
+  elements.phaseButtons.forEach((button) => {
+    button.addEventListener("click", () => setPhase(button.dataset.phase));
   });
   elements.previousWeek.addEventListener("click", () => setWeek(state.week - 1));
   elements.nextWeek.addEventListener("click", () => setWeek(state.week + 1));
@@ -443,7 +575,6 @@ function bindEvents() {
 
 async function init() {
   populateTeamSelect();
-  buildWeekNavigation();
   loadPreferences();
   bindEvents();
   try {
@@ -451,12 +582,20 @@ async function init() {
     if (!response.ok) throw new Error(`Schedule request failed: ${response.status}`);
     const payload = await response.json();
     schedule = payload.games;
-    const hasWeekQuery = new URLSearchParams(window.location.search).has("week");
-    const hasStoredWeek = (() => {
-      try { return Object.hasOwn(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"), "week"); }
+    const query = new URLSearchParams(window.location.search);
+    const hasPositionQuery = query.has("week") || query.has("phase");
+    const hasStoredPosition = (() => {
+      try {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        return Object.hasOwn(stored, "week") && Object.hasOwn(stored, "phase");
+      }
       catch { return false; }
     })();
-    if (!hasWeekQuery && !hasStoredWeek) state.week = getCurrentWeek();
+    if (!hasPositionQuery && !hasStoredPosition) {
+      const position = getCurrentSchedulePosition();
+      state.phase = position.phase;
+      state.week = position.week;
+    }
     render();
   } catch (error) {
     console.error(error);

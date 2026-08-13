@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="The complete 2026 pro football schedule, built to never spoil a score."
+      content="The complete 2026 pro football preseason and regular-season schedule, built to never spoil a score."
     />
     <meta name="theme-color" content="#102236" />
     <title>NOFL — Football, minus the spoilers</title>
@@ -29,7 +29,7 @@
     <main>
       <section class="hero" aria-labelledby="page-title">
         <div class="hero-copy">
-          <p class="eyebrow">2026 regular season · 272 games</p>
+          <p class="eyebrow">2026 season · 321 games</p>
           <h1 id="page-title">Football.<br /><em>No final scores.</em></h1>
           <p class="hero-intro">
             Plan the season, find your team, and come back whenever you like.
@@ -47,12 +47,13 @@
 
       <section class="control-deck" aria-label="Schedule controls">
         <div class="control-group team-control">
-          <label for="team-select">Follow a team</label>
+          <label for="team-select">Follow teams</label>
           <div class="select-wrap">
             <select id="team-select">
-              <option value="ALL">All 32 teams</option>
+              <option value="">Add a team…</option>
             </select>
           </div>
+          <div class="followed-teams" id="followed-teams" aria-live="polite"></div>
         </div>
 
         <div class="control-group view-control">
@@ -85,7 +86,12 @@
         </button>
       </section>
 
-      <nav class="week-nav" aria-label="Regular season weeks">
+      <nav class="phase-nav" aria-label="Season phase">
+        <button class="phase-button" type="button" data-phase="preseason" aria-pressed="false">Preseason <span>49 games</span></button>
+        <button class="phase-button is-active" type="button" data-phase="regular" aria-pressed="true">Regular season <span>272 games</span></button>
+      </nav>
+
+      <nav class="week-nav" aria-label="Schedule weeks">
         <button class="week-arrow" id="previous-week" type="button" aria-label="Previous week">←</button>
         <div class="week-track" id="week-track"></div>
         <button class="week-arrow" id="next-week" type="button" aria-label="Next week">→</button>

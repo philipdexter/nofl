@@ -4,10 +4,12 @@
 Usage:
   python3 scripts/update_schedule.py
   python3 scripts/update_schedule.py --input /path/to/full-season.json
+      --preseason-input /path/to/preseason-week-1.json
 
-Without --input, the script downloads each regular-season week from ESPN's
-public scoreboard endpoint. Only future-facing schedule fields are retained.
-Scores, records, status, winner flags, and result links are never written.
+Without inputs, the script downloads the Hall of Fame game, all three preseason
+weeks, and each regular-season week from ESPN's public scoreboard endpoint.
+Only future-facing schedule fields are retained. Scores, records, status,
+winner flags, and result links are never written.
 """
 
 from __future__ import annotations
@@ -24,20 +26,26 @@ OUTPUT = ROOT / "data" / "schedule.json"
 SEASON = 2026
 ENDPOINT = (
     "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
-    "?seasontype=2&week={week}&dates={season}"
+    "?seasontype={season_type}&week={week}&dates={season}"
 )
 
 
-def fetch_week(week: int) -> dict:
+def fetch_week(week: int, season_type: int) -> dict:
     request = urllib.request.Request(
-        ENDPOINT.format(week=week, season=SEASON),
+        ENDPOINT.format(week=week, season=SEASON, season_type=season_type),
         headers={"User-Agent": "NOFL schedule builder/1.0"},
     )
     with urllib.request.urlopen(request, timeout=30) as response:
         return json.load(response)
 
 
-def games_from_scoreboard(payload: dict, week: int) -> list[dict]:
+def week_label(phase: str, week: int) -> str:
+    if phase == "preseason":
+        return "Hall of Fame" if week == 1 else f"Preseason {week - 1}"
+    return f"Week {week}"
+
+
+def games_from_scoreboard(payload: dict, week: int, phase: str) -> list[dict]:
     games = []
     for event in payload.get("events", []):
         competition = event["competitions"][0]
@@ -81,19 +89,22 @@ def games_from_scoreboard(payload: dict, week: int) -> list[dict]:
                     },
                     "neutralSite": competition.get("neutralSite", False),
                     "notes": notes,
-                }
+                },
+                phase,
             )
         )
     return games
 
 
-def normalize_game(game: dict) -> dict:
+def normalize_game(game: dict, phase: str = "regular") -> dict:
     matchup = game["matchup"]
     venue = game.get("venue") or {}
     valid_time = bool(game.get("timeValid", True))
     return {
         "id": str(game["id"]),
+        "seasonType": phase,
         "week": int(game["week"]),
+        "weekLabel": week_label(phase, int(game["week"])),
         "kickoff": game.get("startTimeUTC") if valid_time else None,
         "dateTbd": not valid_time,
         "away": matchup["away"]["abbreviation"],
@@ -108,32 +119,45 @@ def normalize_game(game: dict) -> dict:
     }
 
 
-def load_input(path: pathlib.Path) -> list[dict]:
+def load_input(path: pathlib.Path, phase: str) -> list[dict]:
     with path.open(encoding="utf-8") as stream:
         payload = json.load(stream)
     if "weeks" in payload:
-        return [normalize_game(game) for week in payload["weeks"] for game in week["games"]]
-    return [game for week in range(1, 19) for game in games_from_scoreboard(payload, week)]
+        return [normalize_game(game, phase) for week in payload["weeks"] for game in week["games"]]
+    week = int(payload.get("week", {}).get("number", 1))
+    return games_from_scoreboard(payload, week, phase)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=pathlib.Path)
+    parser.add_argument("--preseason-input", type=pathlib.Path, action="append", default=[])
     args = parser.parse_args()
 
     if args.input:
-        games = load_input(args.input)
+        games = load_input(args.input, "regular")
+        for path in args.preseason_input:
+            games.extend(load_input(path, "preseason"))
         source = "Imported schedule snapshot; verified against NFL.com"
     else:
         games = []
+        for week in range(1, 5):
+            games.extend(games_from_scoreboard(fetch_week(week, 1), week, "preseason"))
         for week in range(1, 19):
-            games.extend(games_from_scoreboard(fetch_week(week), week))
+            games.extend(games_from_scoreboard(fetch_week(week, 2), week, "regular"))
         source = "ESPN public scoreboard API; verified against NFL.com"
 
-    games.sort(key=lambda game: (game["week"], game["kickoff"] or "9999", game["home"]))
+    games.sort(
+        key=lambda game: (
+            0 if game["seasonType"] == "preseason" else 1,
+            game["week"],
+            game["kickoff"] or "9999",
+            game["home"],
+        )
+    )
     bundle = {
         "season": SEASON,
-        "seasonType": "regular",
+        "seasonTypes": ["preseason", "regular"],
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": source,
         "gameCount": len(games),

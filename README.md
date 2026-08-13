@@ -1,17 +1,18 @@
 # NOFL
 
-A polished, spoiler-free view of the 2026 NFL regular-season schedule. It shows
+A polished, spoiler-free view of the 2026 NFL preseason and regular-season schedule. It shows
 matchups, kickoff times, broadcasts, and venues—but never scores, winners,
 records, live states, or recap links.
 
 ## Features
 
-- All 272 regular-season games across 18 weeks
-- Follow any team and highlight or isolate its games
+- All 49 preseason and 272 regular-season games
+- Single-week navigation or an all-weeks season view
+- Follow multiple teams and highlight or isolate all of their games
 - Prime-time and international-game filters
 - Automatic local-time conversion with an Eastern-time option
 - Shareable filtered URLs and `.ics` calendar downloads
-- Saved preferences, compact mode, keyboard support, and responsive layouts
+- Locally saved team preferences, compact mode, keyboard support, and responsive layouts
 - Locally bundled fonts and no runtime dependencies
 
 ## Run locally
