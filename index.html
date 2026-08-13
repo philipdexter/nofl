@@ -47,11 +47,22 @@
 
       <section class="control-deck" aria-label="Schedule controls">
         <div class="control-group team-control">
-          <label for="team-select">Follow teams</label>
-          <div class="select-wrap">
-            <select id="team-select">
-              <option value="">Add a team…</option>
-            </select>
+          <span class="control-label">Follow teams</span>
+          <div class="team-picker-wrap">
+            <button class="picker-trigger" id="team-picker-button" type="button" aria-expanded="false" aria-controls="team-picker-panel">
+              <span id="team-picker-label">Choose teams…</span>
+              <span aria-hidden="true">↓</span>
+            </button>
+            <div class="team-picker-panel" id="team-picker-panel" hidden>
+              <header>
+                <div>
+                  <strong>Choose your teams</strong>
+                  <span>Select as many as you like</span>
+                </div>
+                <button id="clear-teams" type="button">Clear all</button>
+              </header>
+              <div class="team-picker-grid" id="team-picker-grid"></div>
+            </div>
           </div>
           <div class="followed-teams" id="followed-teams" aria-live="polite"></div>
         </div>
@@ -86,10 +97,15 @@
         </button>
       </section>
 
-      <nav class="phase-nav" aria-label="Season phase">
-        <button class="phase-button" type="button" data-phase="preseason" aria-pressed="false">Preseason <span>49 games</span></button>
-        <button class="phase-button is-active" type="button" data-phase="regular" aria-pressed="true">Regular season <span>272 games</span></button>
-      </nav>
+      <div class="schedule-options">
+        <label class="preseason-toggle" for="preseason-toggle">
+          <input id="preseason-toggle" type="checkbox" />
+          <span class="toggle-box" aria-hidden="true"></span>
+          <span>Include preseason</span>
+          <small>49 games</small>
+        </label>
+        <p>Regular season · 272 games</p>
+      </div>
 
       <nav class="week-nav" aria-label="Schedule weeks">
         <button class="week-arrow" id="previous-week" type="button" aria-label="Previous week">←</button>
@@ -125,7 +141,7 @@
     </main>
 
     <footer class="site-footer">
-      <p>NOFL is an unofficial, fan-made schedule. Team names belong to their respective owners.</p>
+      <p>NOFL is an unofficial, fan-made schedule. Team names and marks belong to their respective owners.</p>
       <p>
         Schedule checked against
         <a href="https://www.nfl.com/schedules/2026/" target="_blank" rel="noreferrer">the official NFL schedule</a>.

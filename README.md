@@ -9,6 +9,8 @@ records, live states, or recap links.
 - All 49 preseason and 272 regular-season games
 - Single-week navigation or an all-weeks season view
 - Follow multiple teams and highlight or isolate all of their games
+- Visual 32-team picker with locally bundled team marks and a clear-all action
+- Optional preseason checkbox that adds HOF and PW1–PW3 to the week strip
 - Prime-time and international-game filters
 - Automatic local-time conversion with an Eastern-time option
 - Shareable filtered URLs and `.ics` calendar downloads

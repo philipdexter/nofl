@@ -35,11 +35,15 @@ const TEAMS = {
 
 const STORAGE_KEY = "nofl-preferences-v1";
 const elements = {
-  teamSelect: document.querySelector("#team-select"),
+  teamPickerButton: document.querySelector("#team-picker-button"),
+  teamPickerLabel: document.querySelector("#team-picker-label"),
+  teamPickerPanel: document.querySelector("#team-picker-panel"),
+  teamPickerGrid: document.querySelector("#team-picker-grid"),
+  clearTeams: document.querySelector("#clear-teams"),
   followedTeams: document.querySelector("#followed-teams"),
   timezoneSelect: document.querySelector("#timezone-select"),
   viewButtons: [...document.querySelectorAll("[data-view]")],
-  phaseButtons: [...document.querySelectorAll("[data-phase]")],
+  preseasonToggle: document.querySelector("#preseason-toggle"),
   densityButton: document.querySelector("#density-button"),
   shareButton: document.querySelector("#share-button"),
   previousWeek: document.querySelector("#previous-week"),
@@ -59,6 +63,7 @@ let schedule = [];
 let state = {
   teams: [],
   phase: "regular",
+  includePreseason: false,
   week: 1,
   allWeeks: false,
   view: "all",
@@ -87,10 +92,15 @@ function loadPreferences() {
   if (["all", "team", "primetime", "international"].includes(query.get("view"))) {
     state.view = query.get("view");
   }
-  if (["preseason", "regular"].includes(query.get("phase"))) state.phase = query.get("phase");
+  if (["preseason", "regular"].includes(query.get("phase"))) {
+    state.phase = query.get("phase");
+    if (state.phase === "preseason") state.includePreseason = true;
+  }
+  if (query.get("preseason") === "1") state.includePreseason = true;
   if (["local", "America/New_York"].includes(query.get("tz"))) state.timezone = query.get("tz");
   if (query.get("compact") === "1") state.compact = true;
   state.teams = [...new Set((state.teams || []).filter((code) => TEAMS[code]))];
+  if (!state.includePreseason && state.phase === "preseason") state.phase = "regular";
   state.week = clamp(state.week, 1, state.phase === "preseason" ? 4 : 18);
 }
 
@@ -108,19 +118,49 @@ function getTimeZone() {
 
 function getCurrentSchedulePosition() {
   const now = new Date();
-  const futureGames = schedule.filter((game) => game.kickoff && new Date(game.kickoff) >= now);
+  const futureGames = schedule.filter(
+    (game) => (state.includePreseason || game.seasonType === "regular") && game.kickoff && new Date(game.kickoff) >= now,
+  );
   if (futureGames.length) return { phase: futureGames[0].seasonType, week: futureGames[0].week };
   return { phase: "regular", week: 18 };
 }
 
-function populateTeamSelect() {
+function schedulePeriods() {
+  const preseason = [
+    { phase: "preseason", week: 1, short: "HOF", label: "Hall of Fame Weekend" },
+    { phase: "preseason", week: 2, short: "PW1", label: "Preseason Week 1" },
+    { phase: "preseason", week: 3, short: "PW2", label: "Preseason Week 2" },
+    { phase: "preseason", week: 4, short: "PW3", label: "Preseason Week 3" },
+  ];
+  const regular = Array.from({ length: 18 }, (_, index) => ({
+    phase: "regular",
+    week: index + 1,
+    short: `W${index + 1}`,
+    label: `Week ${index + 1}`,
+  }));
+  return state.includePreseason ? [...preseason, ...regular] : regular;
+}
+
+function logoPath(code) {
+  return `assets/team-logos/${code.toLowerCase()}.png`;
+}
+
+function populateTeamPicker() {
   Object.entries(TEAMS)
     .sort(([, a], [, b]) => `${a.city} ${a.name}`.localeCompare(`${b.city} ${b.name}`))
     .forEach(([code, team]) => {
-      const option = document.createElement("option");
-      option.value = code;
-      option.textContent = `${team.city} ${team.name}`;
-      elements.teamSelect.append(option);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "picker-team";
+      button.dataset.team = code;
+      button.setAttribute("aria-pressed", "false");
+      button.innerHTML = `<img src="${logoPath(code)}" alt="" /><span><small>${team.city}</small><strong>${team.name}</strong></span><b aria-hidden="true">✓</b>`;
+      button.addEventListener("click", () => {
+        const wasFollowed = state.teams.includes(code);
+        toggleTeam(code);
+        showToast(`${wasFollowed ? "Unfollowed" : "Following"} ${team.city} ${team.name}`);
+      });
+      elements.teamPickerGrid.append(button);
     });
 }
 
@@ -132,36 +172,30 @@ function renderWeekNavigation() {
   allButton.className = "week-button week-button-all";
   allButton.dataset.week = "all";
   allButton.textContent = "ALL";
-  allButton.setAttribute("aria-label", `View all ${state.phase === "preseason" ? "preseason" : "regular-season"} weeks`);
+  allButton.setAttribute("aria-label", `View all ${state.includePreseason ? "preseason and regular-season" : "regular-season"} weeks`);
   allButton.addEventListener("click", () => setAllWeeks());
   fragment.append(allButton);
-  const weeks = state.phase === "preseason"
-    ? [
-        { week: 1, short: "HOF", label: "Hall of Fame Weekend" },
-        { week: 2, short: "P1", label: "Preseason Week 1" },
-        { week: 3, short: "P2", label: "Preseason Week 2" },
-        { week: 4, short: "P3", label: "Preseason Week 3" },
-      ]
-    : Array.from({ length: 18 }, (_, index) => ({ week: index + 1, short: `W${index + 1}`, label: `Week ${index + 1}` }));
-  weeks.forEach(({ week, short, label }) => {
+  schedulePeriods().forEach(({ phase, week, short, label }) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "week-button";
+    button.dataset.phase = phase;
     button.dataset.week = String(week);
     button.textContent = short;
     button.setAttribute("aria-label", label);
-    button.addEventListener("click", () => setWeek(week));
+    button.addEventListener("click", () => setWeek(phase, week));
     fragment.append(button);
   });
   elements.weekTrack.append(fragment);
 }
 
-function setWeek(week) {
+function setWeek(phase, week) {
   state.allWeeks = false;
-  state.week = clamp(week, 1, state.phase === "preseason" ? 4 : 18);
+  state.phase = phase;
+  state.week = clamp(week, 1, phase === "preseason" ? 4 : 18);
   savePreferences();
   render();
-  const active = elements.weekTrack.querySelector(`[data-week="${state.week}"]`);
+  const active = elements.weekTrack.querySelector(`[data-phase="${state.phase}"][data-week="${state.week}"]`);
   active?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
 }
 
@@ -172,14 +206,21 @@ function setAllWeeks() {
   elements.weekTrack.querySelector('[data-week="all"]')?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
 }
 
-function setPhase(phase) {
-  if (!["preseason", "regular"].includes(phase) || phase === state.phase) return;
-  state.phase = phase;
-  const phaseGames = schedule.filter((game) => game.seasonType === phase);
-  const upcoming = phaseGames.find((game) => game.kickoff && new Date(game.kickoff) >= new Date());
-  state.week = upcoming?.week || phaseGames[0]?.week || 1;
+function setIncludePreseason(include) {
+  state.includePreseason = include;
+  if (!include && state.phase === "preseason") {
+    state.phase = "regular";
+    state.week = 1;
+  }
   savePreferences();
   render();
+}
+
+function moveWeek(offset) {
+  const periods = schedulePeriods();
+  const index = periods.findIndex((period) => period.phase === state.phase && period.week === state.week);
+  const target = periods[index + offset];
+  if (target) setWeek(target.phase, target.week);
 }
 
 function toggleTeam(code) {
@@ -187,9 +228,17 @@ function toggleTeam(code) {
   state.teams = state.teams.includes(code)
     ? state.teams.filter((teamCode) => teamCode !== code)
     : [...state.teams, code];
-  elements.teamSelect.value = "";
   savePreferences();
   render();
+}
+
+function clearTeams() {
+  if (!state.teams.length) return;
+  state.teams = [];
+  if (state.view === "team") state.view = "all";
+  savePreferences();
+  render();
+  showToast("All teams cleared");
 }
 
 function isPrimeTime(game) {
@@ -206,7 +255,9 @@ function isPrimeTime(game) {
 
 function filteredGames() {
   const games = schedule.filter(
-    (game) => game.seasonType === state.phase && (state.allWeeks || game.week === state.week),
+    (game) => state.allWeeks
+      ? state.includePreseason || game.seasonType === "regular"
+      : game.seasonType === state.phase && game.week === state.week,
   );
   if (state.view === "team") {
     if (!state.teams.length) return games;
@@ -263,7 +314,7 @@ function makeTeam(teamElement, code, side) {
   teamElement.dataset.team = code;
   teamElement.setAttribute("aria-label", `${isFollowed ? "Unfollow" : "Follow"} the ${team.city} ${team.name}`);
   teamElement.setAttribute("aria-pressed", String(isFollowed));
-  teamElement.querySelector(`.${side}-token`).textContent = code;
+  teamElement.querySelector(`.${side}-token`).innerHTML = `<img src="${logoPath(code)}" alt="" />`;
   teamElement.querySelector(`.${side}-token`).style.setProperty("--team-color", team.color);
   teamElement.querySelector(`.${side}-token`).style.setProperty("--team-secondary", team.secondary);
   teamElement.querySelector(`.${side}-city`).textContent = team.city;
@@ -332,13 +383,14 @@ function appendDateGroups(games, parent) {
 }
 
 function renderSchedule() {
-  const phaseGames = schedule.filter((game) => game.seasonType === state.phase);
+  const includedGames = schedule.filter((game) => state.includePreseason || game.seasonType === "regular");
+  const phaseGames = includedGames.filter((game) => game.seasonType === state.phase);
   const selectedWeekGames = phaseGames.filter((game) => game.week === state.week);
   const games = filteredGames();
   elements.scheduleHeading.textContent = state.allWeeks
-    ? (state.phase === "preseason" ? "All preseason" : "Full season")
+    ? (state.includePreseason ? "Full 2026 schedule" : "Full season")
     : selectedWeekGames[0]?.weekLabel || (state.phase === "preseason" ? "Preseason" : `Week ${state.week}`);
-  elements.weekRange.textContent = weekRange(state.allWeeks ? phaseGames : selectedWeekGames);
+  elements.weekRange.textContent = weekRange(state.allWeeks ? includedGames : selectedWeekGames);
   elements.gameCount.textContent = `${games.length} ${games.length === 1 ? "game" : "games"}`;
   elements.scheduleList.replaceChildren();
 
@@ -354,8 +406,9 @@ function renderSchedule() {
   if (state.allWeeks) {
     const weeks = new Map();
     games.forEach((game) => {
-      if (!weeks.has(game.week)) weeks.set(game.week, []);
-      weeks.get(game.week).push(game);
+      const key = `${game.seasonType}-${game.week}`;
+      if (!weeks.has(key)) weeks.set(key, []);
+      weeks.get(key).push(game);
     });
     weeks.forEach((weekGames) => {
       const section = document.createElement("section");
@@ -421,7 +474,7 @@ function renderFollowedTeams() {
     button.type = "button";
     button.className = "followed-team";
     button.style.setProperty("--team-color", team.color);
-    button.innerHTML = `<span>${code}</span> ${team.name} <b aria-hidden="true">×</b>`;
+    button.innerHTML = `<span><img src="${logoPath(code)}" alt="" /></span> ${team.name} <b aria-hidden="true">×</b>`;
     button.setAttribute("aria-label", `Unfollow the ${team.city} ${team.name}`);
     button.addEventListener("click", () => {
       toggleTeam(code);
@@ -432,9 +485,16 @@ function renderFollowedTeams() {
 }
 
 function renderControls() {
-  elements.teamSelect.value = "";
   renderFollowedTeams();
   renderWeekNavigation();
+  elements.teamPickerLabel.textContent = state.teams.length
+    ? `${state.teams.length} ${state.teams.length === 1 ? "team" : "teams"} followed`
+    : "Choose teams…";
+  elements.clearTeams.disabled = !state.teams.length;
+  elements.teamPickerGrid.querySelectorAll(".picker-team").forEach((button) => {
+    button.setAttribute("aria-pressed", String(state.teams.includes(button.dataset.team)));
+  });
+  elements.preseasonToggle.checked = state.includePreseason;
   elements.timezoneSelect.value = state.timezone;
   elements.viewButtons.forEach((button) => {
     const active = button.dataset.view === state.view;
@@ -443,17 +503,14 @@ function renderControls() {
   });
   elements.densityButton.setAttribute("aria-pressed", String(state.compact));
   document.body.classList.toggle("is-compact", state.compact);
-  elements.phaseButtons.forEach((button) => {
-    const active = button.dataset.phase === state.phase;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-  elements.previousWeek.disabled = state.allWeeks || state.week === 1;
-  elements.nextWeek.disabled = state.allWeeks || state.week === (state.phase === "preseason" ? 4 : 18);
+  const periods = schedulePeriods();
+  const currentIndex = periods.findIndex((period) => period.phase === state.phase && period.week === state.week);
+  elements.previousWeek.disabled = state.allWeeks || currentIndex <= 0;
+  elements.nextWeek.disabled = state.allWeeks || currentIndex === periods.length - 1;
   document.querySelectorAll(".week-button").forEach((button) => {
     const active = button.dataset.week === "all"
       ? state.allWeeks
-      : !state.allWeeks && Number(button.dataset.week) === state.week;
+      : !state.allWeeks && button.dataset.phase === state.phase && Number(button.dataset.week) === state.week;
     button.classList.toggle("is-active", active);
     if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
@@ -516,7 +573,8 @@ async function shareView() {
   const url = new URL(window.location.href);
   url.search = "";
   if (state.teams.length) url.searchParams.set("teams", state.teams.join(","));
-  if (state.phase !== "regular") url.searchParams.set("phase", state.phase);
+  if (state.includePreseason) url.searchParams.set("preseason", "1");
+  if (!state.allWeeks && state.phase !== "regular") url.searchParams.set("phase", state.phase);
   if (state.allWeeks) url.searchParams.set("weeks", "all");
   else url.searchParams.set("week", String(state.week));
   if (state.view !== "all") url.searchParams.set("view", state.view);
@@ -532,16 +590,25 @@ async function shareView() {
 }
 
 function bindEvents() {
-  elements.teamSelect.addEventListener("change", (event) => {
-    if (!event.target.value) return;
-    const code = event.target.value;
-    if (state.teams.includes(code)) {
-      showToast(`${TEAMS[code].city} ${TEAMS[code].name} is already followed`);
-      event.target.value = "";
-      return;
+  elements.teamPickerButton.addEventListener("click", () => {
+    const open = elements.teamPickerPanel.hidden;
+    elements.teamPickerPanel.hidden = !open;
+    elements.teamPickerButton.setAttribute("aria-expanded", String(open));
+  });
+  elements.clearTeams.addEventListener("click", clearTeams);
+  document.addEventListener("click", (event) => {
+    const picker = elements.teamPickerButton.closest(".team-picker-wrap");
+    if (!elements.teamPickerPanel.hidden && !picker.contains(event.target)) {
+      elements.teamPickerPanel.hidden = true;
+      elements.teamPickerButton.setAttribute("aria-expanded", "false");
     }
-    toggleTeam(code);
-    showToast(`Following ${TEAMS[code].city} ${TEAMS[code].name}`);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !elements.teamPickerPanel.hidden) {
+      elements.teamPickerPanel.hidden = true;
+      elements.teamPickerButton.setAttribute("aria-expanded", "false");
+      elements.teamPickerButton.focus();
+    }
   });
   elements.timezoneSelect.addEventListener("change", (event) => {
     state.timezone = event.target.value;
@@ -552,7 +619,7 @@ function bindEvents() {
     button.addEventListener("click", () => {
       if (button.dataset.view === "team" && !state.teams.length) {
         showToast("Choose one or more teams first");
-        elements.teamSelect.focus();
+        elements.teamPickerButton.focus();
         return;
       }
       state.view = button.dataset.view;
@@ -560,11 +627,9 @@ function bindEvents() {
       render();
     });
   });
-  elements.phaseButtons.forEach((button) => {
-    button.addEventListener("click", () => setPhase(button.dataset.phase));
-  });
-  elements.previousWeek.addEventListener("click", () => setWeek(state.week - 1));
-  elements.nextWeek.addEventListener("click", () => setWeek(state.week + 1));
+  elements.preseasonToggle.addEventListener("change", (event) => setIncludePreseason(event.target.checked));
+  elements.previousWeek.addEventListener("click", () => moveWeek(-1));
+  elements.nextWeek.addEventListener("click", () => moveWeek(1));
   elements.densityButton.addEventListener("click", () => {
     state.compact = !state.compact;
     savePreferences();
@@ -574,7 +639,7 @@ function bindEvents() {
 }
 
 async function init() {
-  populateTeamSelect();
+  populateTeamPicker();
   loadPreferences();
   bindEvents();
   try {

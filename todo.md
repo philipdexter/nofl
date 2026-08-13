@@ -2,5 +2,6 @@
 - [x] save team preference in a cookie or whatever, local storage?
 - [x] include preseason games
 - [x] allow option to view all weeks in a single screen so no clicking through weeks
-- [ ] add logos for the teams if you can
-- [ ] check the weeks, something seems wrong that week 3, for example, is "AUGUST 21 — SEPTEMBER 29"
+- [x] add logos for the teams if you can
+- [x] check the weeks, something seems wrong that week 3, for example, is "AUGUST 21 — SEPTEMBER 29"
+- [ ] use "/Users/philip/Downloads/ChatGPT\ Image\ Aug\ 13,\ 2026\ at\ 02_42_25\ PM.png " as a favicon (move it here)
