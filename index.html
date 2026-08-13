@@ -9,8 +9,19 @@
     />
     <meta name="theme-color" content="#102236" />
     <title>NOFL — Football, minus the spoilers</title>
-    <link rel="stylesheet" href="assets/styles.css" />
-    <script src="assets/app.js" defer></script>
+    <link rel="icon" href="assets/favicon.png?v=20260813-2" type="image/png" />
+    <link rel="apple-touch-icon" href="assets/favicon.png?v=20260813-2" />
+    <link rel="stylesheet" href="assets/styles.css?v=20260813-2" />
+    <script src="assets/app.js?v=20260813-2" defer></script>
+    <script>
+      window.setTimeout(() => {
+        const list = document.querySelector("#schedule-list");
+        if (list?.getAttribute("aria-busy") === "true") {
+          list.innerHTML = '<div class="error-card">The playbook took too long to open. <button type="button" onclick="location.reload()">Reload the latest version</button></div>';
+          list.setAttribute("aria-busy", "false");
+        }
+      }, 8000);
+    </script>
   </head>
   <body>
     <a class="skip-link" href="#schedule">Skip to schedule</a>

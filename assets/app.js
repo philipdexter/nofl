@@ -643,7 +643,7 @@ async function init() {
   loadPreferences();
   bindEvents();
   try {
-    const response = await fetch("data/schedule.json");
+    const response = await fetch("data/schedule.json?v=20260813-2");
     if (!response.ok) throw new Error(`Schedule request failed: ${response.status}`);
     const payload = await response.json();
     schedule = payload.games;

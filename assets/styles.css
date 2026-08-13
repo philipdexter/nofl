@@ -1033,6 +1033,17 @@ a:focus-visible {
   color: var(--ink-soft);
 }
 
+.error-card button {
+  margin-left: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  color: white;
+  background: var(--ink);
+  font-size: 12px;
+  font-weight: 850;
+}
+
 .promise {
   display: grid;
   grid-template-columns: 160px minmax(300px, 1.2fr) minmax(260px, 0.8fr);
