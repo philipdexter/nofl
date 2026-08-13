@@ -1,0 +1,50 @@
+# NOFL
+
+A polished, spoiler-free view of the 2026 NFL regular-season schedule. It shows
+matchups, kickoff times, broadcasts, and venues—but never scores, winners,
+records, live states, or recap links.
+
+## Features
+
+- All 272 regular-season games across 18 weeks
+- Follow any team and highlight or isolate its games
+- Prime-time and international-game filters
+- Automatic local-time conversion with an Eastern-time option
+- Shareable filtered URLs and `.ics` calendar downloads
+- Saved preferences, compact mode, keyboard support, and responsive layouts
+- Locally bundled fonts and no runtime dependencies
+
+## Run locally
+
+```sh
+python3 -m http.server 4173
+```
+
+Then open <http://localhost:4173>. A server is needed because browsers usually
+block `fetch()` for JSON when an HTML file is opened directly from disk.
+
+## GitHub Pages
+
+The site uses only relative asset paths, so it works at a project URL such as
+`https://philipdexter.github.io/nofl/`. The included Pages workflow deploys every
+push to `main`. In the repository settings, choose **GitHub Actions** as the
+Pages source if it is not already selected.
+
+## Update the schedule
+
+The updater uses Python's standard library and strips the source response down
+to an allowlist of spoiler-safe fields:
+
+```sh
+python3 scripts/update_schedule.py
+python3 scripts/check_spoilers.py
+```
+
+It can also normalize a saved full-season snapshot:
+
+```sh
+python3 scripts/update_schedule.py --input /path/to/snapshot.json
+```
+
+The schedule was checked against the [official NFL schedule](https://www.nfl.com/schedules/2026/).
+Dates, times, and broadcasts remain subject to flex scheduling.

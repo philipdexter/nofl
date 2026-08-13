@@ -1,3 +1,27 @@
+@font-face {
+  font-family: "Roboto Slab";
+  src: url("fonts/roboto-slab-500.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Roboto Slab";
+  src: url("fonts/roboto-slab-800.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Roboto Slab";
+  src: url("fonts/roboto-slab-900.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
   --ink: #102236;
@@ -155,10 +179,11 @@ p {
 h1 {
   max-width: 900px;
   margin-bottom: 26px;
-  font-size: clamp(58px, 8.4vw, 126px);
-  font-weight: 950;
-  line-height: 0.79;
-  letter-spacing: -0.085em;
+  font-family: "Roboto Slab", Rockwell, Georgia, serif;
+  font-size: clamp(58px, 7.7vw, 114px);
+  font-weight: 900;
+  line-height: 0.87;
+  letter-spacing: -0.065em;
 }
 
 h1 em {
@@ -166,9 +191,10 @@ h1 em {
   display: inline-block;
   z-index: 0;
   color: var(--ink);
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 400;
-  letter-spacing: -0.075em;
+  font-family: inherit;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: -0.06em;
 }
 
 h1 em::after {
@@ -803,13 +829,23 @@ body.is-compact .venue {
   .site-header,
   main,
   .site-footer {
-    width: min(100% - 28px, 720px);
+    width: calc(100vw - 28px);
+    max-width: 720px;
   }
 
   .hero {
     grid-template-columns: 1fr;
     gap: 42px;
     padding: 66px 0 50px;
+  }
+
+  .hero,
+  .hero-copy,
+  .team-spotlight,
+  .control-deck,
+  .schedule-shell {
+    max-width: 100%;
+    min-width: 0;
   }
 
   h1 {
@@ -876,12 +912,21 @@ body.is-compact .venue {
 }
 
 @media (max-width: 560px) {
+  body {
+    overflow-x: hidden;
+  }
+
   .site-header {
     min-height: 72px;
   }
 
   .spoiler-seal {
+    font-size: 0;
+  }
+
+  .spoiler-seal::after {
     font-size: 9px;
+    content: "Spoiler safe";
   }
 
   .hero {
@@ -889,7 +934,12 @@ body.is-compact .venue {
   }
 
   h1 {
-    font-size: clamp(50px, 15.5vw, 78px);
+    font-size: clamp(44px, 13.5vw, 66px);
+    letter-spacing: -0.07em;
+  }
+
+  h1 em {
+    font-size: 0.82em;
   }
 
   .control-deck {
@@ -908,6 +958,11 @@ body.is-compact .venue {
   .segmented {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+
+  .segment {
+    min-width: 0;
+    white-space: normal;
   }
 
   .week-nav {
