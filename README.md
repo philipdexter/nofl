@@ -26,9 +26,9 @@ block `fetch()` for JSON when an HTML file is opened directly from disk.
 ## GitHub Pages
 
 The site uses only relative asset paths, so it works at a project URL such as
-`https://philipdexter.github.io/nofl/`. The included Pages workflow deploys every
-push to `main`. In the repository settings, choose **GitHub Actions** as the
-Pages source if it is not already selected.
+`https://philipdexter.github.io/nofl/`. In the repository's **Settings → Pages**,
+choose **Deploy from a branch**, select `main` and `/ (root)`, then save. No
+build step or GitHub Actions workflow is required.
 
 ## Update the schedule
 
