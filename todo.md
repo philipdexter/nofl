@@ -5,3 +5,4 @@
 - [x] add logos for the teams if you can
 - [x] check the weeks, something seems wrong that week 3, for example, is "AUGUST 21 — SEPTEMBER 29"
 - [x] use "/Users/philip/Downloads/ChatGPT\ Image\ Aug\ 13,\ 2026\ at\ 02_42_25\ PM.png " as a favicon (move it here)
+- [x] add a "today" button that jumps to the next game starting from today

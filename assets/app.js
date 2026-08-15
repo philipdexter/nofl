@@ -46,6 +46,7 @@ const elements = {
   preseasonToggle: document.querySelector("#preseason-toggle"),
   densityButton: document.querySelector("#density-button"),
   shareButton: document.querySelector("#share-button"),
+  todayButton: document.querySelector("#today-button"),
   previousWeek: document.querySelector("#previous-week"),
   nextWeek: document.querySelector("#next-week"),
   weekTrack: document.querySelector("#week-track"),
@@ -253,12 +254,7 @@ function isPrimeTime(game) {
   return easternHour >= 19;
 }
 
-function filteredGames() {
-  const games = schedule.filter(
-    (game) => state.allWeeks
-      ? state.includePreseason || game.seasonType === "regular"
-      : game.seasonType === state.phase && game.week === state.week,
-  );
+function applyViewFilter(games) {
   if (state.view === "team") {
     if (!state.teams.length) return games;
     return games.filter((game) => state.teams.includes(game.away) || state.teams.includes(game.home));
@@ -266,6 +262,41 @@ function filteredGames() {
   if (state.view === "primetime") return games.filter(isPrimeTime);
   if (state.view === "international") return games.filter((game) => game.neutralSite);
   return games;
+}
+
+function filteredGames() {
+  const games = schedule.filter(
+    (game) => state.allWeeks
+      ? state.includePreseason || game.seasonType === "regular"
+      : game.seasonType === state.phase && game.week === state.week,
+  );
+  return applyViewFilter(games);
+}
+
+function jumpToToday() {
+  const now = new Date();
+  const included = schedule.filter(
+    (game) => (state.includePreseason || game.seasonType === "regular")
+      && game.kickoff
+      && new Date(game.kickoff) >= now,
+  );
+  const game = applyViewFilter(included)[0];
+  if (!game) {
+    showToast("No upcoming games in this view");
+    return;
+  }
+
+  state.allWeeks = false;
+  state.phase = game.seasonType;
+  state.week = game.week;
+  savePreferences();
+  render();
+  requestAnimationFrame(() => {
+    const card = document.querySelector(`[data-game-id="${game.id}"]`);
+    card?.classList.add("is-today-target");
+    card?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => card?.classList.remove("is-today-target"), 2400);
+  });
 }
 
 function formatDateParts(kickoff) {
@@ -628,6 +659,7 @@ function bindEvents() {
     });
   });
   elements.preseasonToggle.addEventListener("change", (event) => setIncludePreseason(event.target.checked));
+  elements.todayButton.addEventListener("click", jumpToToday);
   elements.previousWeek.addEventListener("click", () => moveWeek(-1));
   elements.nextWeek.addEventListener("click", () => moveWeek(1));
   elements.densityButton.addEventListener("click", () => {
@@ -643,7 +675,7 @@ async function init() {
   loadPreferences();
   bindEvents();
   try {
-    const response = await fetch("data/schedule.json?v=20260813-2");
+    const response = await fetch("data/schedule.json?v=20260815-1");
     if (!response.ok) throw new Error(`Schedule request failed: ${response.status}`);
     const payload = await response.json();
     schedule = payload.games;

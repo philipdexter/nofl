@@ -8,6 +8,7 @@ records, live states, or recap links.
 
 - All 49 preseason and 272 regular-season games
 - Single-week navigation or an all-weeks season view
+- “Today” navigation to the next kickoff matching the active filters
 - Follow multiple teams and highlight or isolate all of their games
 - Visual 32-team picker with locally bundled team marks and a clear-all action
 - Optional preseason checkbox that adds HOF and PW1–PW3 to the week strip

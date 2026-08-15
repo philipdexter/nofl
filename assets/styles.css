@@ -676,9 +676,34 @@ a:focus-visible {
 
 .week-nav {
   display: grid;
-  grid-template-columns: 50px minmax(0, 1fr) 50px;
+  grid-template-columns: auto 50px minmax(0, 1fr) 50px;
   gap: 10px;
   margin: 10px 0 42px;
+}
+
+.today-button {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  padding: 0 17px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--lime);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.today-button span {
+  color: #30a46c;
+  font-size: 9px;
+}
+
+.today-button:hover {
+  color: white;
+  background: var(--ink);
 }
 
 .week-track {
@@ -846,6 +871,11 @@ a:focus-visible {
 .game-card.is-followed {
   border-color: var(--team-accent);
   box-shadow: inset 7px 0 0 var(--team-accent), 0 8px 30px rgba(16, 34, 54, 0.08);
+}
+
+.game-card.is-today-target {
+  border-color: var(--orange);
+  box-shadow: inset 7px 0 0 var(--orange), 0 0 0 5px rgba(255, 107, 53, 0.14), 0 14px 38px rgba(16, 34, 54, 0.12);
 }
 
 .game-card.is-dimmed {
@@ -1335,7 +1365,11 @@ body.is-compact .venue {
   }
 
   .week-nav {
-    grid-template-columns: 42px minmax(0, 1fr) 42px;
+    grid-template-columns: auto 42px minmax(0, 1fr) 42px;
+  }
+
+  .today-button {
+    padding-inline: 13px;
   }
 
   .schedule-header {

@@ -9,10 +9,10 @@
     />
     <meta name="theme-color" content="#102236" />
     <title>NOFL — Football, minus the spoilers</title>
-    <link rel="icon" href="assets/favicon.png?v=20260813-2" type="image/png" />
-    <link rel="apple-touch-icon" href="assets/favicon.png?v=20260813-2" />
-    <link rel="stylesheet" href="assets/styles.css?v=20260813-2" />
-    <script src="assets/app.js?v=20260813-2" defer></script>
+    <link rel="icon" href="assets/favicon.png?v=20260815-1" type="image/png" />
+    <link rel="apple-touch-icon" href="assets/favicon.png?v=20260815-1" />
+    <link rel="stylesheet" href="assets/styles.css?v=20260815-1" />
+    <script src="assets/app.js?v=20260815-1" defer></script>
     <script>
       window.setTimeout(() => {
         const list = document.querySelector("#schedule-list");
@@ -119,6 +119,7 @@
       </div>
 
       <nav class="week-nav" aria-label="Schedule weeks">
+        <button class="today-button" id="today-button" type="button"><span aria-hidden="true">●</span> Today</button>
         <button class="week-arrow" id="previous-week" type="button" aria-label="Previous week">←</button>
         <div class="week-track" id="week-track"></div>
         <button class="week-arrow" id="next-week" type="button" aria-label="Next week">→</button>
