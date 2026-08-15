@@ -286,12 +286,14 @@ function jumpToToday() {
     return;
   }
 
-  state.allWeeks = false;
-  state.phase = game.seasonType;
-  state.week = game.week;
-  savePreferences();
-  render();
+  if (!state.allWeeks) {
+    state.phase = game.seasonType;
+    state.week = game.week;
+    savePreferences();
+    render();
+  }
   requestAnimationFrame(() => {
+    document.querySelectorAll(".game-card.is-today-target").forEach((card) => card.classList.remove("is-today-target"));
     const card = document.querySelector(`[data-game-id="${game.id}"]`);
     card?.classList.add("is-today-target");
     card?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -675,7 +677,7 @@ async function init() {
   loadPreferences();
   bindEvents();
   try {
-    const response = await fetch("data/schedule.json?v=20260815-1");
+    const response = await fetch("data/schedule.json?v=20260815-2");
     if (!response.ok) throw new Error(`Schedule request failed: ${response.status}`);
     const payload = await response.json();
     schedule = payload.games;
