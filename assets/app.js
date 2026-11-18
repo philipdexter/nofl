@@ -387,6 +387,16 @@ function buildGameCard(game) {
   } else {
     calendarButton.addEventListener("click", () => downloadCalendar(game));
   }
+  const recapLink = card.querySelector(".recap-link");
+  if (game.recapUrl) {
+    recapLink.href = game.recapUrl;
+    recapLink.setAttribute(
+      "aria-label",
+      `Watch ${TEAMS[game.away].city} ${TEAMS[game.away].name} at ${TEAMS[game.home].city} ${TEAMS[game.home].name} recap on YouTube`,
+    );
+  } else {
+    recapLink.remove();
+  }
   return card;
 }
 
@@ -677,7 +687,7 @@ async function init() {
   loadPreferences();
   bindEvents();
   try {
-    const response = await fetch("data/schedule.json?v=20260815-2");
+    const response = await fetch("data/schedule.json?v=20261118-2");
     if (!response.ok) throw new Error(`Schedule request failed: ${response.status}`);
     const payload = await response.json();
     schedule = payload.games;

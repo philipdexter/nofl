@@ -1022,22 +1022,37 @@ a:focus-visible {
   font-weight: 850;
 }
 
-.calendar-button {
+.game-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.calendar-button,
+.recap-link {
   display: inline-flex;
   gap: 7px;
   align-items: center;
+  justify-content: center;
   min-height: 40px;
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
+  color: var(--ink);
   background: transparent;
   font-size: 11px;
   font-weight: 850;
+  text-decoration: none;
 }
 
-.calendar-button:hover {
+.calendar-button:hover,
+.recap-link:hover {
   border-color: var(--ink);
   background: var(--lime);
+}
+
+.recap-link {
+  color: white;
+  background: var(--ink);
 }
 
 .empty-state,
@@ -1186,7 +1201,8 @@ body.is-compact .venue {
     gap: 14px;
   }
 
-  .calendar-label {
+  .calendar-label,
+  .recap-label {
     display: none;
   }
 }
@@ -1271,7 +1287,7 @@ body.is-compact .venue {
     grid-row: 2;
   }
 
-  .calendar-button {
+  .game-actions {
     grid-column: 3;
     grid-row: 1 / span 2;
   }
@@ -1378,7 +1394,7 @@ body.is-compact .venue {
 
   .game-card,
   body.is-compact .game-card {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 14px;
     padding: 18px;
   }
@@ -1412,7 +1428,7 @@ body.is-compact .venue {
     grid-row: 3;
   }
 
-  .calendar-button {
+  .game-actions {
     grid-column: 2;
     grid-row: 2 / span 2;
   }

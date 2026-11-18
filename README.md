@@ -1,8 +1,8 @@
 # NOFL
 
 A polished, spoiler-free view of the 2026 NFL preseason and regular-season schedule. It shows
-matchups, kickoff times, broadcasts, and venues—but never scores, winners,
-records, live states, or recap links.
+matchups, kickoff times, broadcasts, venues, and official NFL YouTube recaps—but
+never scores, winners, records, or live states.
 
 ## Features
 
@@ -15,6 +15,7 @@ records, live states, or recap links.
 - Prime-time and international-game filters
 - Automatic local-time conversion with an Eastern-time option
 - Shareable filtered URLs and `.ics` calendar downloads
+- Official NFL YouTube recap links for completed games
 - Locally saved team preferences, compact mode, keyboard support, and responsive layouts
 - Locally bundled fonts and no runtime dependencies
 
@@ -52,3 +53,20 @@ python3 scripts/update_schedule.py --input /path/to/snapshot.json
 
 The schedule was checked against the [official NFL schedule](https://www.nfl.com/schedules/2026/).
 Dates, times, and broadcasts remain subject to flex scheduling.
+
+## Update recap links
+
+Install [yt-dlp](https://github.com/yt-dlp/yt-dlp), then run:
+
+```sh
+python3 scripts/update_recaps.py
+python3 scripts/update_recaps.py --team BUF --team NYG --team NE
+python3 scripts/check_spoilers.py
+```
+
+The recap updater only accepts videos from the official NFL YouTube channel
+that match both teams and the correct week; it verifies the season from the
+title or upload date. Existing links are skipped, so it is safe to run every
+Monday morning. Use `--dry-run` to search without changing the schedule,
+`--team` (repeatable) to limit the teams, or `--refresh` to re-check existing
+links.

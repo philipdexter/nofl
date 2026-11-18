@@ -134,6 +134,18 @@ def main() -> None:
     parser.add_argument("--preseason-input", type=pathlib.Path, action="append", default=[])
     args = parser.parse_args()
 
+    existing_recaps = {}
+    recaps_updated_at = None
+    if OUTPUT.exists():
+        with OUTPUT.open(encoding="utf-8") as stream:
+            existing_bundle = json.load(stream)
+            existing_recaps = {
+                game["id"]: game["recapUrl"]
+                for game in existing_bundle.get("games", [])
+                if game.get("recapUrl")
+            }
+            recaps_updated_at = existing_bundle.get("recapsUpdatedAt")
+
     if args.input:
         games = load_input(args.input, "regular")
         for path in args.preseason_input:
@@ -155,6 +167,9 @@ def main() -> None:
             game["home"],
         )
     )
+    for game in games:
+        if game["id"] in existing_recaps:
+            game["recapUrl"] = existing_recaps[game["id"]]
     bundle = {
         "season": SEASON,
         "seasonTypes": ["preseason", "regular"],
@@ -163,6 +178,8 @@ def main() -> None:
         "gameCount": len(games),
         "games": games,
     }
+    if existing_recaps and recaps_updated_at:
+        bundle["recapsUpdatedAt"] = recaps_updated_at
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     with OUTPUT.open("w", encoding="utf-8") as stream:
         json.dump(bundle, stream, indent=2)

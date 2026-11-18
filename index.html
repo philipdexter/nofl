@@ -11,8 +11,8 @@
     <title>NOFL — Football, minus the spoilers</title>
     <link rel="icon" href="assets/favicon.png?v=20260815-2" type="image/png" />
     <link rel="apple-touch-icon" href="assets/favicon.png?v=20260815-2" />
-    <link rel="stylesheet" href="assets/styles.css?v=20260815-2" />
-    <script src="assets/app.js?v=20260815-2" defer></script>
+    <link rel="stylesheet" href="assets/styles.css?v=20261118-2" />
+    <script src="assets/app.js?v=20261118-2" defer></script>
     <script>
       window.setTimeout(() => {
         const list = document.querySelector("#schedule-list");
@@ -146,8 +146,8 @@
           <h2>We don’t know who won.<br />And we don’t want to.</h2>
         </div>
         <p>
-          The default schedule contains no scores, results, records, live states,
-          recap links, or winner data. “Final” isn’t in our vocabulary.
+          The schedule contains no scores, results, records, live states, or winner
+          data. Recaps open directly on the NFL’s YouTube channel.
         </p>
       </section>
     </main>
@@ -191,9 +191,14 @@
           <span class="venue"></span>
           <span class="game-note"></span>
         </div>
-        <button class="calendar-button" type="button" aria-label="Download calendar event" title="Add to calendar">
-          <span aria-hidden="true">＋</span><span class="calendar-label">Calendar</span>
-        </button>
+        <div class="game-actions">
+          <a class="recap-link" target="_blank" rel="noopener noreferrer" title="Watch recap on YouTube">
+            <span aria-hidden="true">▶</span><span class="recap-label">Recap</span>
+          </a>
+          <button class="calendar-button" type="button" aria-label="Download calendar event" title="Add to calendar">
+            <span aria-hidden="true">＋</span><span class="calendar-label">Calendar</span>
+          </button>
+        </div>
       </article>
     </template>
   </body>

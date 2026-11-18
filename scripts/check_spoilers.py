@@ -40,6 +40,11 @@ if leaks:
     raise SystemExit(1)
 
 games = payload.get("games", [])
+for game in games:
+    recap_url = game.get("recapUrl")
+    if recap_url:
+        assert recap_url.startswith("https://www.youtube.com/watch?v="), "Recaps must use canonical YouTube URLs"
+        assert game.get("kickoff"), "A recap must belong to a scheduled game"
 regular = [game for game in games if game.get("seasonType") == "regular"]
 preseason = [game for game in games if game.get("seasonType") == "preseason"]
 assert payload.get("gameCount") == len(games) == 321, "Expected all 321 scheduled games"
